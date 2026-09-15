@@ -1,0 +1,1215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Live Threat Monitor</title>
+<style>
+  :root {
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #05070A;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  }
+  .ltm-mono {
+    font-family: "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Section shell                                                     */
+  /* ---------------------------------------------------------------- */
+  .ltm-section {
+    position: relative;
+    width: 100%;
+    height: 420px;
+    background: #05070A;
+    overflow: hidden;
+    user-select: none;
+  }
+  @media (min-width: 640px) {
+    .ltm-section { height: 560px; }
+  }
+  @media (min-width: 1024px) {
+    .ltm-section { height: 720px; }
+  }
+
+  .ltm-scan {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    opacity: 0.05;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(120,170,255,0.4) 0px,
+      rgba(120,170,255,0.4) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    background-size: 100% 6px;
+    animation: ltm-scan-move 9s linear infinite;
+  }
+  @keyframes ltm-scan-move {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 240px; }
+  }
+
+  .ltm-wrap {
+    position: absolute;
+    inset: 0;
+    cursor: grab;
+  }
+  .ltm-wrap.dragging { cursor: grabbing; }
+  .ltm-canvas-inner {
+    width: 100%;
+    height: 100%;
+    transform-origin: center center;
+  }
+  .ltm-canvas-inner.ltm-inner-smooth {
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .ltm-canvas-inner canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Top-left label + status                                          */
+  /* ---------------------------------------------------------------- */
+  .ltm-topleft {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  @media (min-width: 640px) {
+    .ltm-topleft { top: 24px; left: 24px; }
+  }
+  .ltm-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.5);
+  }
+  @media (min-width: 640px) {
+    .ltm-label { font-size: 11px; }
+  }
+  .ltm-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    border-radius: 999px;
+    padding: 4px 8px;
+  }
+  .ltm-dot-wrap {
+    position: relative;
+    display: flex;
+    height: 6px;
+    width: 6px;
+  }
+  .ltm-dot-ping {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: #34d399;
+    opacity: 0.6;
+    animation: ltm-ping 1.6s cubic-bezier(0,0,0.2,1) infinite;
+  }
+  .ltm-dot-core {
+    position: relative;
+    height: 6px;
+    width: 6px;
+    border-radius: 999px;
+    background: #34d399;
+  }
+  @keyframes ltm-ping {
+    75%, 100% { transform: scale(2.2); opacity: 0; }
+  }
+  .ltm-status-text {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: rgba(110,231,183,0.9);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ltm-scan { display: none; }
+    .ltm-dot-ping { animation: none; display: none; }
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Zoom controls                                                     */
+  /* ---------------------------------------------------------------- */
+  .ltm-zoom {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ltm-zoom button {
+    height: 28px;
+    width: 28px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color .15s, color .15s;
+    padding: 0;
+  }
+  .ltm-zoom button:hover {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+  }
+  .ltm-zoom button.ltm-hidden { display: none; }
+
+  /* ---------------------------------------------------------------- */
+  /* Stat counters                                                     */
+  /* ---------------------------------------------------------------- */
+  .ltm-stats {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    column-gap: 20px;
+    row-gap: 8px;
+    text-align: right;
+  }
+  @media (min-width: 640px) {
+    .ltm-stats { top: 24px; right: 24px; column-gap: 28px; }
+  }
+  .ltm-stat-value {
+    font-size: 16px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    display: inline-block;
+    transition: text-shadow 0.3s ease;
+  }
+  .ltm-stat-value.ltm-flash {
+    animation: ltm-flash 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes ltm-flash {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.12); text-shadow: 0 0 10px currentColor; }
+    100% { transform: scale(1); text-shadow: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ltm-stat-value.ltm-flash { animation: none; }
+    .ltm-canvas-inner.ltm-inner-smooth { transition: none; }
+  }
+  @media (min-width: 640px) {
+    .ltm-stat-value { font-size: 20px; }
+  }
+  .ltm-stat-label {
+    margin-top: 4px;
+    font-size: 8.5px;
+    letter-spacing: 0.14em;
+    color: rgba(255,255,255,0.35);
+  }
+  @media (min-width: 640px) {
+    .ltm-stat-label { font-size: 9px; }
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Feed panel (desktop)                                              */
+  /* ---------------------------------------------------------------- */
+  .ltm-feed {
+    display: none;
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    z-index: 10;
+    width: 288px;
+    flex-direction: column;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(8,11,16,0.9);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+  }
+  @media (min-width: 768px) {
+    .ltm-feed { display: flex; }
+  }
+  .ltm-feed-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .ltm-feed-title {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.4);
+  }
+  .ltm-feed-time {
+    font-size: 10px;
+    color: rgba(255,255,255,0.25);
+  }
+  .ltm-feed-body {
+    max-height: 208px;
+    overflow: hidden;
+    padding: 6px;
+  }
+  .ltm-feed-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 6px;
+    padding: 6px 8px;
+    animation: ltm-row-in .22s ease-out;
+  }
+  .ltm-feed-row:hover { background: rgba(255,255,255,0.03); }
+  @keyframes ltm-row-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .ltm-feed-dot {
+    height: 6px;
+    width: 6px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+  .ltm-feed-main { min-width: 0; flex: 1; }
+  .ltm-feed-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .ltm-feed-type {
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: rgba(255,255,255,0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ltm-feed-when {
+    font-size: 9.5px;
+    color: rgba(255,255,255,0.3);
+    flex-shrink: 0;
+  }
+  .ltm-feed-route {
+    font-size: 10.5px;
+    color: rgba(255,255,255,0.4);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ltm-feed-empty {
+    padding: 24px 8px;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Mobile ticker                                                     */
+  /* ---------------------------------------------------------------- */
+  .ltm-ticker {
+    display: flex;
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    width: 92%;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(8,11,16,0.9);
+    backdrop-filter: blur(8px);
+    padding: 8px 12px;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    overflow: hidden;
+  }
+  @media (min-width: 768px) {
+    .ltm-ticker { display: none; }
+  }
+  .ltm-ticker-dot {
+    height: 6px;
+    width: 6px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+  .ltm-ticker-type { color: rgba(255,255,255,0.8); flex-shrink: 0; }
+  .ltm-ticker-route {
+    color: rgba(255,255,255,0.4);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Tooltip                                                           */
+  /* ---------------------------------------------------------------- */
+  .ltm-tooltip {
+    pointer-events: none;
+    position: absolute;
+    z-index: 20;
+    transform: translate(-50%, calc(-100% - 4px));
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(10,15,22,0.95);
+    padding: 8px 12px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .ltm-tooltip.visible {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 10px));
+  }
+  .ltm-tooltip-title { font-weight: 500; letter-spacing: 0.02em; }
+  .ltm-tooltip-line {
+    margin-top: 2px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+  }
+</style>
+</head>
+<body>
+
+<section class="ltm-section" id="ltmSection">
+  <div class="ltm-scan" aria-hidden="true"></div>
+
+  <div class="ltm-wrap" id="ltmWrap">
+    <div class="ltm-canvas-inner" id="ltmInner">
+      <canvas id="ltmCanvas"></canvas>
+    </div>
+  </div>
+
+  <div class="ltm-tooltip ltm-mono" id="ltmTooltip">
+    <div class="ltm-tooltip-title" id="ltmTooltipTitle"></div>
+    <div class="ltm-tooltip-line">Monitored node</div>
+    <div class="ltm-tooltip-line">Click and drag to pan</div>
+  </div>
+
+  <div class="ltm-topleft">
+    <span class="ltm-label ltm-mono">LIVE THREAT MONITOR</span>
+    <span class="ltm-status">
+      <span class="ltm-dot-wrap">
+        <span class="ltm-dot-ping"></span>
+        <span class="ltm-dot-core"></span>
+      </span>
+      <span class="ltm-status-text ltm-mono">SYSTEM ACTIVE</span>
+    </span>
+  </div>
+
+  <div class="ltm-zoom">
+    <button id="ltmZoomIn" aria-label="Zoom in">
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    </button>
+    <button id="ltmZoomOut" aria-label="Zoom out">
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    </button>
+    <button id="ltmZoomReset" aria-label="Reset view" class="ltm-hidden">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 5a4 4 0 1 1 1.2 2.85M1 5V2M1 5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <div class="ltm-stats ltm-mono">
+    <div>
+      <div class="ltm-stat-value" id="statDetected" style="color:#4C8DF6">0</div>
+      <div class="ltm-stat-label">THREATS DETECTED</div>
+    </div>
+    <div>
+      <div class="ltm-stat-value" id="statBlocked" style="color:#2DD4E8">0</div>
+      <div class="ltm-stat-label">ATTACKS BLOCKED</div>
+    </div>
+    <div>
+      <div class="ltm-stat-value" id="statActive" style="color:#F6A64B">0</div>
+      <div class="ltm-stat-label">ACTIVE THREATS</div>
+    </div>
+    <div>
+      <div class="ltm-stat-value" id="statSources" style="color:#8B8FA3">0</div>
+      <div class="ltm-stat-label">SOURCES MONITORED</div>
+    </div>
+  </div>
+
+  <div class="ltm-feed">
+    <div class="ltm-feed-head">
+      <span class="ltm-feed-title ltm-mono">THREAT FEED</span>
+      <span class="ltm-feed-time ltm-mono" id="feedTime">--:--:--</span>
+    </div>
+    <div class="ltm-feed-body" id="feedBody">
+      <div class="ltm-feed-empty ltm-mono">awaiting activity&hellip;</div>
+    </div>
+  </div>
+
+  <div class="ltm-ticker ltm-mono" id="ltmTicker" style="display:none;"></div>
+</section>
+
+<script>
+const LAND_COLS = 220;
+const LAND_ROWS = 110;
+const LAND_HEX = [
+  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000",
+  "000000000000001fff007fff8000000000000000000000000000000",
+  "0000000000000dfffbfffffffc00000000000000018000000000000",
+  "00000000000007bf03ffffffc00007c00000000001e000000000000",
+  "00000000006018bc3fffffffc000019800000000000000000000000",
+  "000000001991c400087fffffc000000000001e0000bfe0001000000",
+  "0000000000c000c0001fffffc00000000000c0001fff80000000000",
+  "000000003f4859bc000fffff00000000000300c1fffffff80000000",
+  "8002000011fc18ffc003fffd80000000000181dffffffffbffe0001",
+  "003fff87d1ff6c31f805fffe0000007fc00019dfffffffffffff6be",
+  "c07fffffff0e2f717c07ffc0000001fffe4fffeffffffffffffffff",
+  "fc5fffffffffff807707ff00880003ffedfffffffffffffffffffff",
+  "18efffffffffff73fc03f800f80007e7efffffffffffffffffffffe",
+  "007ffffffffffe003c01f00000003f9ffffffffffffffffffffffff",
+  "007ffffffffff803c000f00000007f1ffffffffffffffffffffcbf0",
+  "001f60fffffff001f200000000007f81fffffffffffffffffff0c00",
+  "0003000ffffff801ff00000000100707fffffffffffffffff001800",
+  "00080007ffffff01ff00000000301b1fffffffffffffffffc007c00",
+  "00200003fffffff3ffe000000058103fffffffffffffffff8007800",
+  "00000001fffffff3fff0000000dc7ffffffffffffffffffff007000",
+  "00000000fffffffbffe00000001efffffffffffffffffffff400000",
+  "00000000bffffffff81000000003fffffffffffffffffffff400000",
+  "000000001ffffffffc3c0000001fffffffffffffffffffffe000000",
+  "000000003ffffffffc0000000007fffff7fbffffffffffffe400000",
+  "000000003ffffffffb0000000007ffff37e7ffffffffffffc000000",
+  "000000003fffffffe0000000007fccfe03e7ffffffffffff0e00000",
+  "000000003fffffffe000000000ff173e31f1fffffffffff80000000",
+  "000000003fffffff80000000007c113bfff3fffffffffef00800000",
+  "000000001fffffff0000000000fc0013fff1fffffffffc381000000",
+  "000000001fffffff000000000038f811fffbffffffffff987000000",
+  "000000000fffffff000000000037f8042ffffffffffffe19f000000",
+  "0000000003fffffc00000000007ff8000fffffffffffff010000000",
+  "0000000001fffff80000000000fffe381fffffffffffff000000000",
+  "00000000017ffe700000000000ffffffffffffffffffff000000000",
+  "0000000000bfe0180000000001fffffffff7ffffffffff000000000",
+  "0000000000dfc00a0000000003ffffffeff17fffffffff000000000",
+  "00000000004fc0080000000007ffffffe7fc3dfffffffe000000000",
+  "000000000027c002000000000ffffffff7ffc0fffffffd000000000",
+  "000800000007c024000000000ffffffff3ffc0fffbffe0000000000",
+  "000000000007e181000000000ffffffffbff803fe1fe40000000000",
+  "000000000003e300300000000ffffffff9ff801fc1fe80000000000",
+  "000000000000ff00000000000ffffffffcff001f00fe00800000000",
+  "00000000000007e0000000000ffffffffcfc001e003f01000000000",
+  "00000000000001e0000000000fffffffffe0000e003f80c00000000",
+  "0000000000000060000000000fffffffff00000e002780200000000",
+  "0000000000000020f580000007ffffffffb8000e002700000000000",
+  "0000000000000015ff80000003fffffffff80005002200000000000",
+  "0000000000000003ffc0000003fffffffff00001000000200000000",
+  "0000000000000001fff8000000fc7ffffff00000001804200000000",
+  "0000000000000001fffe000000001fffffe0000000480c000000000",
+  "0000000000000003fffe000000000fffffc0000000283c000000000",
+  "0000000000000007fffe000000000fffff80000000187cc80000000",
+  "0000000000000007ffff000000001fffff00000000187d030000000",
+  "0000000000000007fffff00000000ffffe000000000e79807000000",
+  "000000000000000ffffffe00000007fffc00000000060180fe10000",
+  "0000000000000007ffffff80000007fffc000000000200003f60000",
+  "0000000000000007ffffff80000003fffc0000000001e0001f00000",
+  "0000000000000003ffffff80000003fffc000000000004200c80800",
+  "0000000000000003ffffff00000003fffe000000000000000000000",
+  "0000000000000001fffffe00000003fffe00000000000001c000000",
+  "0000000000000001fffffc00000003fffe180000000000178400000",
+  "0000000000000000fffffc00000007fffe3000000000003f8e00000",
+  "00000000000000003ffffc00000007fff87000000000003fee00000",
+  "00000000000000001ffffc00000003fff0700000000000fffe00000",
+  "00000000000000001ffff800000003ffe0700000000003ffff80200",
+  "00000000000000001ffff800000001fff0e0000000000fffff80000",
+  "00000000000000001fffc000000001fff060000000001fffffc0000",
+  "00000000000000001fff8000000001ffc040000000000fffffe0000",
+  "00000000000000001fff0000000001ffc000000000000ffffff0000",
+  "00000000000000003fff0000000000ffc000000000000ffffff0000",
+  "00000000000000003ffe00000000007f8000000000000ffffff0000",
+  "00000000000000003ffc00000000007f00000000000007f1ffe0000",
+  "00000000000000003ffc00000000007c0000000000000fc0ffe0000",
+  "00000000000000003fe000000000000000000000000000001fc0000",
+  "00000000000000007fe000000000000000000000000000001fc0000",
+  "00000000000000007fc000000000000000000000000000000500006",
+  "00000000000000007f0000000000000000000000000000000000004",
+  "00000000000000007c0000000000000000000000000000000180010",
+  "00000000000000007c0000000000000000000000000000000100030",
+  "0000000000000000fc00000000000000000000000000000000000e0",
+  "0000000000000000f80000000000000000000000000000000000000",
+  "0000000000000000f80000000000000000000000000000000000000",
+  "0000000000000000f80000000000000000000000000000000000000",
+  "0000000000000000f06000000000000000000000000000000000000",
+  "0000000000000000700000000000000000000000000000000000000",
+  "00000000000000003c0000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000030000000000000000038000000c30008000000",
+  "00000000000000000400000000000000003fee01ffffffffff00000",
+  "00000000000000003f000000000000003bffff87fffffffffffe000",
+  "0000000000000000770000000021ffffffffff3ffffffffffffff80",
+  "00000000000181000f80000003fffffffffffffffffffffffffffc0",
+  "0000001d8780ffffff0000000fffffffffffffffffffffffffffe00",
+  "000007fffffffffff0000000ffffffffffffffffffffffffffffc00",
+  "0007ffffffffffff8000003fffffffffffffffffffffffffffffc00",
+  "00181ffffffffffe0001e0cfffffffffffffffffffffffffffff800",
+  "00001fffffffffffe00000ffffffffffffffffffffffffffffff000",
+  "00007fffffffffffffcfffffffffffffffffffffffffffffffffe00",
+  "ae003fffffffffffffffffffffffffffffffffffffffffffffffff4",
+  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000",
+];
+(function () {
+  "use strict";
+
+  function hexRowToBits(hex, cols) {
+    var out = new Uint8Array(cols);
+    var bitIndex = 0;
+    for (var i = 0; i < hex.length && bitIndex < cols; i++) {
+      var nibble = parseInt(hex[i], 16);
+      for (var b = 3; b >= 0 && bitIndex < cols; b--) {
+        out[bitIndex] = (nibble >> b) & 1;
+        bitIndex++;
+      }
+    }
+    return out;
+  }
+
+  var LAND_GRID = LAND_HEX.map(function (row) {
+    return hexRowToBits(row, LAND_COLS);
+  });
+
+  function isLandCell(row, col) {
+    if (row < 0 || row >= LAND_ROWS || col < 0 || col >= LAND_COLS) return false;
+    return LAND_GRID[row][col] === 1;
+  }
+
+  // -----------------------------------------------------------------
+  // Domain data
+  // -----------------------------------------------------------------
+  var NODES = [
+    { id: "nyc", name: "New York", lat: 40.7, lon: -74.0 },
+    { id: "sfo", name: "San Francisco", lat: 37.7, lon: -122.4 },
+    { id: "tor", name: "Toronto", lat: 43.7, lon: -79.4 },
+    { id: "mex", name: "Mexico City", lat: 19.4, lon: -99.1 },
+    { id: "sao", name: "São Paulo", lat: -23.5, lon: -46.6 },
+    { id: "bue", name: "Buenos Aires", lat: -34.6, lon: -58.4 },
+    { id: "lon", name: "London", lat: 51.5, lon: -0.1 },
+    { id: "par", name: "Paris", lat: 48.9, lon: 2.3 },
+    { id: "fra", name: "Frankfurt", lat: 50.1, lon: 8.7 },
+    { id: "mos", name: "Moscow", lat: 55.8, lon: 37.6 },
+    { id: "ist", name: "Istanbul", lat: 41.0, lon: 28.9 },
+    { id: "lag", name: "Lagos", lat: 6.5, lon: 3.4 },
+    { id: "joh", name: "Johannesburg", lat: -26.2, lon: 28.0 },
+    { id: "dub", name: "Dubai", lat: 25.2, lon: 55.3 },
+    { id: "mum", name: "Mumbai", lat: 19.1, lon: 72.9 },
+    { id: "sin", name: "Singapore", lat: 1.35, lon: 103.8 },
+    { id: "jak", name: "Jakarta", lat: -6.2, lon: 106.8 },
+    { id: "bei", name: "Beijing", lat: 39.9, lon: 116.4 },
+    { id: "sha", name: "Shanghai", lat: 31.2, lon: 121.5 },
+    { id: "tok", name: "Tokyo", lat: 35.7, lon: 139.7 },
+    { id: "seo", name: "Seoul", lat: 37.6, lon: 127.0 },
+    { id: "syd", name: "Sydney", lat: -33.9, lon: 151.2 }
+  ];
+
+  var THREAT_TYPES = ["RANSOMWARE", "BOTNET", "PHISHING", "MALWARE", "DDoS", "BRUTE FORCE"];
+
+  var BASE_SEVERITY = {
+    RANSOMWARE: "CRITICAL",
+    DDoS: "HIGH",
+    BOTNET: "MEDIUM",
+    "BRUTE FORCE": "MEDIUM",
+    PHISHING: "LOW",
+    MALWARE: "LOW"
+  };
+
+  var SEVERITY_COLOR = {
+    CRITICAL: "#FB5459",
+    HIGH: "#F6A64B",
+    MEDIUM: "#2DD4E8",
+    LOW: "#4C8DF6"
+  };
+
+  var SEVERITY_ORDER = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+  function jitterSeverity(base) {
+    var idx = SEVERITY_ORDER.indexOf(base);
+    var roll = Math.random();
+    var next = idx;
+    if (roll < 0.18) next = idx - 1;
+    else if (roll > 0.85) next = idx + 1;
+    next = Math.max(0, Math.min(SEVERITY_ORDER.length - 1, next));
+    return SEVERITY_ORDER[next];
+  }
+
+  function pickTwoDistinct(arr) {
+    var a = arr[Math.floor(Math.random() * arr.length)];
+    var b = arr[Math.floor(Math.random() * arr.length)];
+    var guard = 0;
+    while (b === a && guard++ < 10) {
+      b = arr[Math.floor(Math.random() * arr.length)];
+    }
+    return [a, b];
+  }
+
+  function formatClock(d) {
+    return d.toLocaleTimeString(undefined, { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  function project(lat, lon, width, height) {
+    return {
+      x: ((lon + 180) / 360) * width,
+      y: ((90 - lat) / 180) * height
+    };
+  }
+
+  function easeInOutCubic(x) {
+    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  }
+  function easeOutCubic(x) {
+    return 1 - Math.pow(1 - x, 3);
+  }
+  function easeOutExpo(x) {
+    return x >= 1 ? 1 : 1 - Math.pow(2, -10 * x);
+  }
+
+  var START_COUNTERS = { detected: 128442, blocked: 124881, active: 34, sources: 18642 };
+
+  // -----------------------------------------------------------------
+  // DOM refs
+  // -----------------------------------------------------------------
+  var section = document.getElementById("ltmSection");
+  var wrap = document.getElementById("ltmWrap");
+  var inner = document.getElementById("ltmInner");
+  var canvas = document.getElementById("ltmCanvas");
+  var tooltip = document.getElementById("ltmTooltip");
+  var tooltipTitle = document.getElementById("ltmTooltipTitle");
+  var statDetected = document.getElementById("statDetected");
+  var statBlocked = document.getElementById("statBlocked");
+  var statActive = document.getElementById("statActive");
+  var statSources = document.getElementById("statSources");
+  var feedBody = document.getElementById("feedBody");
+  var feedTime = document.getElementById("feedTime");
+  var ticker = document.getElementById("ltmTicker");
+  var zoomInBtn = document.getElementById("ltmZoomIn");
+  var zoomOutBtn = document.getElementById("ltmZoomOut");
+  var zoomResetBtn = document.getElementById("ltmZoomReset");
+
+  var ctx = canvas.getContext("2d");
+  var landCanvas = null;
+
+  var size = { width: 0, height: 0 };
+  var view = { scale: 1, tx: 0, ty: 0 };
+  var dragging = false;
+  var dragStart = { x: 0, y: 0, tx: 0, ty: 0 };
+
+  var counters = Object.assign({}, START_COUNTERS);
+  var feed = [];
+  var attacks = [];
+  var pulses = [];
+  var idCounter = 1;
+  var lastSpawn = 0;
+  var nextSpawnGap = 700;
+  var sweepStart = null;
+  var nextSweepAt = 6000;
+  var hoverNode = null;
+  var visible = true;
+  var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", function (e) {
+    reducedMotion = e.matches;
+  });
+
+  // -----------------------------------------------------------------
+  // Sizing
+  // -----------------------------------------------------------------
+  function resize() {
+    var rect = wrap.getBoundingClientRect();
+    size.width = Math.round(rect.width);
+    size.height = Math.round(rect.height);
+    buildLandLayer();
+  }
+  var ro = new ResizeObserver(resize);
+  ro.observe(wrap);
+
+  function buildLandLayer() {
+    var width = size.width, height = size.height;
+    if (width === 0 || height === 0) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var land = document.createElement("canvas");
+    land.width = width * dpr;
+    land.height = height * dpr;
+    var lctx = land.getContext("2d");
+    lctx.scale(dpr, dpr);
+
+    lctx.strokeStyle = "rgba(120,170,255,0.05)";
+    lctx.lineWidth = 1;
+    for (var lon = -180; lon <= 180; lon += 30) {
+      var px = project(0, lon, width, height).x;
+      lctx.beginPath();
+      lctx.moveTo(px, 0);
+      lctx.lineTo(px, height);
+      lctx.stroke();
+    }
+    for (var lat = -60; lat <= 90; lat += 30) {
+      var py = project(lat, 0, width, height).y;
+      lctx.beginPath();
+      lctx.moveTo(0, py);
+      lctx.lineTo(width, py);
+      lctx.stroke();
+    }
+
+    for (var row = 0; row < LAND_ROWS; row++) {
+      for (var col = 0; col < LAND_COLS; col++) {
+        if (!isLandCell(row, col)) continue;
+        var clat = 90 - (row + 0.5) * (180 / LAND_ROWS);
+        var clon = -180 + (col + 0.5) * (360 / LAND_COLS);
+        var p = project(clat, clon, width, height);
+        var seed = (row * 131 + col * 17) % 100;
+        var alpha = 0.1 + (seed / 100) * 0.12;
+        lctx.fillStyle = "rgba(94,148,255," + alpha.toFixed(3) + ")";
+        var r = width < 640 ? 0.8 : 1.1;
+        lctx.beginPath();
+        lctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        lctx.fill();
+      }
+    }
+    landCanvas = land;
+  }
+
+  // -----------------------------------------------------------------
+  // Simulation: spawn attacks + feed/counters
+  // -----------------------------------------------------------------
+  function spawnAttack() {
+    var pair = pickTwoDistinct(NODES);
+    var from = pair[0], to = pair[1];
+    var type = THREAT_TYPES[Math.floor(Math.random() * THREAT_TYPES.length)];
+    var severity = jitterSeverity(BASE_SEVERITY[type]);
+    var color = SEVERITY_COLOR[severity];
+    var attack = {
+      id: idCounter++,
+      from: from,
+      to: to,
+      color: color,
+      arcBend: (Math.random() - 0.5) * 2,
+      start: performance.now(),
+      duration: 1900 + Math.random() * 1400
+    };
+    attacks.push(attack);
+    if (attacks.length > 40) attacks.splice(0, attacks.length - 40);
+
+    var event = {
+      id: attack.id,
+      type: type,
+      source: from.name,
+      target: to.name,
+      severity: severity,
+      time: formatClock(new Date())
+    };
+    feed.unshift(event);
+    if (feed.length > 6) feed.length = 6;
+    renderFeed();
+    renderTicker(event);
+
+    counters.detected += 1;
+    if (Math.random() < 0.82) counters.blocked += 1;
+    counters.active = attacks.length;
+    if (Math.random() < 0.06) counters.sources += 1;
+    renderCounters();
+  }
+
+  var prevCounters = Object.assign({}, START_COUNTERS);
+
+  function animateStat(el, from, to, duration) {
+    if (from === to || duration <= 0) {
+      el.textContent = to.toLocaleString();
+      return;
+    }
+    if (el._rafId) cancelAnimationFrame(el._rafId);
+    var startTime = null;
+    function step(ts) {
+      if (startTime === null) startTime = ts;
+      var p = Math.min(1, (ts - startTime) / duration);
+      var eased = easeOutCubic(p);
+      var val = Math.round(from + (to - from) * eased);
+      el.textContent = val.toLocaleString();
+      if (p < 1) {
+        el._rafId = requestAnimationFrame(step);
+      } else {
+        el._rafId = null;
+        el.classList.add("ltm-flash");
+        setTimeout(function () { el.classList.remove("ltm-flash"); }, 500);
+      }
+    }
+    el._rafId = requestAnimationFrame(step);
+  }
+
+  function renderCounters() {
+    var dur = reducedMotion ? 0 : 550;
+    animateStat(statDetected, prevCounters.detected, counters.detected, dur);
+    animateStat(statBlocked, prevCounters.blocked, counters.blocked, dur);
+    animateStat(statActive, prevCounters.active, counters.active, 380);
+    animateStat(statSources, prevCounters.sources, counters.sources, dur);
+    prevCounters = Object.assign({}, counters);
+  }
+
+  function renderFeed() {
+    feedTime.textContent = feed.length ? feed[0].time : "--:--:--";
+    if (feed.length === 0) {
+      feedBody.innerHTML = '<div class="ltm-feed-empty ltm-mono">awaiting activity&hellip;</div>';
+      return;
+    }
+    feedBody.innerHTML = feed.map(function (ev) {
+      var c = SEVERITY_COLOR[ev.severity];
+      return (
+        '<div class="ltm-feed-row">' +
+          '<span class="ltm-feed-dot" style="background:' + c + ';box-shadow:0 0 6px ' + c + '"></span>' +
+          '<div class="ltm-feed-main">' +
+            '<div class="ltm-feed-top">' +
+              '<span class="ltm-feed-type ltm-mono">' + ev.type + '</span>' +
+              '<span class="ltm-feed-when ltm-mono">' + ev.time + '</span>' +
+            '</div>' +
+            '<div class="ltm-feed-route">' + ev.source + ' \u2192 ' + ev.target + '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  function renderTicker(ev) {
+    var c = SEVERITY_COLOR[ev.severity];
+    ticker.style.display = "flex";
+    ticker.innerHTML =
+      '<span class="ltm-ticker-dot" style="background:' + c + '"></span>' +
+      '<span class="ltm-ticker-type">' + ev.type + '</span>' +
+      '<span class="ltm-ticker-route">' + ev.source + ' \u2192 ' + ev.target + '</span>';
+  }
+
+  // -----------------------------------------------------------------
+  // Main render loop
+  // -----------------------------------------------------------------
+  function tick(now) {
+    requestAnimationFrame(tick);
+    if (!visible) return;
+
+    var width = size.width, height = size.height;
+    if (width === 0 || height === 0) return;
+
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    var grad = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * 0.7);
+    grad.addColorStop(0, "rgba(20,35,60,0.35)");
+    grad.addColorStop(1, "rgba(3,5,8,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+
+    if (landCanvas) ctx.drawImage(landCanvas, 0, 0, width, height);
+
+    // The attack arcs are the actual content of a live threat map, not a
+    // decorative flourish — so they keep animating even under
+    // prefers-reduced-motion. Only the ambient/non-essential effects below
+    // (radar sweep, node breathing) back off for that preference.
+    if (now - lastSpawn > nextSpawnGap) {
+      lastSpawn = now;
+      nextSpawnGap = 380 + Math.random() * 620;
+      spawnAttack();
+    }
+
+    if (!reducedMotion) {
+      if (sweepStart === null && now > nextSweepAt) sweepStart = now;
+      if (sweepStart !== null) {
+        var sweepT = (now - sweepStart) / 2600;
+        if (sweepT >= 1) {
+          sweepStart = null;
+          nextSweepAt = now + 13000 + Math.random() * 6000;
+        } else {
+          var cx = width / 2, cy = height / 2;
+          var radius = Math.max(width, height) * 0.75;
+          var angle = sweepT * Math.PI * 2 - Math.PI / 2;
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, radius, angle - 0.5, angle);
+          ctx.closePath();
+          if (ctx.createConicGradient) {
+            var sg = ctx.createConicGradient(angle - 0.5, cx, cy);
+            sg.addColorStop(0, "rgba(45,212,232,0)");
+            sg.addColorStop(1, "rgba(45,212,232,0.06)");
+            ctx.fillStyle = sg;
+          } else {
+            ctx.fillStyle = "rgba(45,212,232,0.04)";
+          }
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+    }
+
+    for (var i = attacks.length - 1; i >= 0; i--) {
+      var a = attacks[i];
+      var t = (now - a.start) / a.duration;
+      if (t >= 1) {
+        var p2 = project(a.to.lat, a.to.lon, width, height);
+        pulses.push({ x: p2.x, y: p2.y, start: now, duration: 1100, color: a.color });
+        attacks.splice(i, 1);
+        continue;
+      }
+      var p0 = project(a.from.lat, a.from.lon, width, height);
+      var p1 = project(a.to.lat, a.to.lon, width, height);
+      var mx = (p0.x + p1.x) / 2, my = (p0.y + p1.y) / 2;
+      var dx = p1.x - p0.x, dy = p1.y - p0.y;
+      var dist = Math.hypot(dx, dy) || 1;
+      var nx = -dy / dist, ny = dx / dist;
+      var bend = a.arcBend * Math.min(80, dist * 0.28);
+      var cxp = mx + nx * bend;
+      var cyp = my + ny * bend - Math.min(40, dist * 0.06);
+
+      function bezier(tt) {
+        var u = 1 - tt;
+        return {
+          x: u * u * p0.x + 2 * u * tt * cxp + tt * tt * p1.x,
+          y: u * u * p0.y + 2 * u * tt * cyp + tt * tt * p1.y
+        };
+      }
+
+      // ease the travel progress itself (slow out of the source, slow into
+      // the target) rather than the raw linear timer, so the arc feels like
+      // it has real momentum instead of ticking along at constant speed.
+      var et = easeInOutCubic(t);
+      var trailStartLinear = Math.max(0, t - 0.35);
+      var trailStart = easeInOutCubic(trailStartLinear);
+
+      ctx.save();
+      ctx.strokeStyle = a.color;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      var steps = 24;
+      for (var s = 0; s <= steps; s++) {
+        var tt2 = trailStart + ((et - trailStart) * s) / steps;
+        var pt = bezier(tt2);
+        // fade the tail in from 0 -> ~0.8 alpha so the trail feels like it
+        // is dissolving behind the particle rather than a hard-edged line
+        ctx.globalAlpha = 0.8 * (s / steps);
+        if (s === 0) {
+          ctx.moveTo(pt.x, pt.y);
+        } else {
+          ctx.lineTo(pt.x, pt.y);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(pt.x, pt.y);
+        }
+      }
+      ctx.restore();
+
+      var head = bezier(et);
+      // gentle glow pulse on the particle head itself, tied to a fast sine
+      // so it reads as "traveling energy" rather than a static dot
+      var headPulse = 1 + Math.sin(now / 90 + a.id) * 0.18;
+      ctx.save();
+      ctx.shadowBlur = 14 * headPulse;
+      ctx.shadowColor = a.color;
+      ctx.fillStyle = a.color;
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 2.6 * headPulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    for (var j = pulses.length - 1; j >= 0; j--) {
+      var p = pulses[j];
+      var tp = (now - p.start) / p.duration;
+      if (tp >= 1) {
+        pulses.splice(j, 1);
+        continue;
+      }
+      var rr = 4 + easeOutExpo(tp) * 22;
+      ctx.save();
+      ctx.globalAlpha = Math.pow(1 - tp, 1.6) * 0.6;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, rr, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    var breathe = reducedMotion ? 0 : Math.sin(now / 900) * 0.5 + 0.5;
+    for (var n = 0; n < NODES.length; n++) {
+      var node = NODES[n];
+      var np = project(node.lat, node.lon, width, height);
+      var isHover = hoverNode === node;
+      ctx.save();
+      ctx.beginPath();
+      ctx.fillStyle = isHover ? "rgba(255,255,255,0.95)" : "rgba(120,190,255," + (0.55 + breathe * 0.25).toFixed(3) + ")";
+      ctx.shadowBlur = isHover ? 14 : 6;
+      ctx.shadowColor = isHover ? "#ffffff" : "#5ea4ff";
+      ctx.arc(np.x, np.y, isHover ? 3.2 : 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      if (isHover) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(np.x, np.y, 8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
+  // -----------------------------------------------------------------
+  // Visibility pause
+  // -----------------------------------------------------------------
+  var io = new IntersectionObserver(function (entries) {
+    visible = entries[0].isIntersecting;
+  }, { threshold: 0.05 });
+  io.observe(section);
+
+  // -----------------------------------------------------------------
+  // Pointer interaction: hover + drag pan + zoom
+  // -----------------------------------------------------------------
+  function applyTransform() {
+    inner.style.transform = "translate(" + view.tx + "px, " + view.ty + "px) scale(" + view.scale + ")";
+    zoomResetBtn.classList.toggle("ltm-hidden", view.scale <= 1.001);
+  }
+
+  function clampView(v) {
+    var maxOffsetX = (size.width * (v.scale - 1)) / 2 + 40;
+    var maxOffsetY = (size.height * (v.scale - 1)) / 2 + 40;
+    return {
+      scale: v.scale,
+      tx: Math.max(-maxOffsetX, Math.min(maxOffsetX, v.tx)),
+      ty: Math.max(-maxOffsetY, Math.min(maxOffsetY, v.ty))
+    };
+  }
+
+  var smoothTimeout = null;
+  function withSmoothTransform(fn) {
+    inner.classList.add("ltm-inner-smooth");
+    fn();
+    if (smoothTimeout) clearTimeout(smoothTimeout);
+    smoothTimeout = setTimeout(function () {
+      inner.classList.remove("ltm-inner-smooth");
+    }, 420);
+  }
+
+  function zoomBy(factor) {
+    withSmoothTransform(function () {
+      var nextScale = Math.max(1, Math.min(2.4, view.scale * factor));
+      view = clampView({ scale: nextScale, tx: view.tx, ty: view.ty });
+      applyTransform();
+    });
+  }
+
+  function resetView() {
+    withSmoothTransform(function () {
+      view = { scale: 1, tx: 0, ty: 0 };
+      applyTransform();
+    });
+  }
+
+  zoomInBtn.addEventListener("click", function () { zoomBy(1.35); });
+  zoomOutBtn.addEventListener("click", function () { zoomBy(1 / 1.35); });
+  zoomResetBtn.addEventListener("click", resetView);
+  wrap.addEventListener("dblclick", function () { zoomBy(1.5); });
+
+  function toLocalPoint(clientX, clientY) {
+    var rect = wrap.getBoundingClientRect();
+    var rawX = clientX - rect.left;
+    var rawY = clientY - rect.top;
+    return { x: (rawX - view.tx) / view.scale, y: (rawY - view.ty) / view.scale };
+  }
+
+  wrap.addEventListener("pointerdown", function (e) {
+    if (view.scale <= 1.001) return;
+    if (smoothTimeout) clearTimeout(smoothTimeout);
+    inner.classList.remove("ltm-inner-smooth");
+    dragging = true;
+    wrap.classList.add("dragging");
+    dragStart = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
+    wrap.setPointerCapture && wrap.setPointerCapture(e.pointerId);
+  });
+
+  wrap.addEventListener("pointermove", function (e) {
+    if (dragging) {
+      var dx = e.clientX - dragStart.x;
+      var dy = e.clientY - dragStart.y;
+      view = clampView({ scale: view.scale, tx: dragStart.tx + dx, ty: dragStart.ty + dy });
+      applyTransform();
+      return;
+    }
+    var width = size.width, height = size.height;
+    var local = toLocalPoint(e.clientX, e.clientY);
+    var closest = null;
+    var closestDist = 14;
+    for (var i = 0; i < NODES.length; i++) {
+      var p = project(NODES[i].lat, NODES[i].lon, width, height);
+      var d = Math.hypot(p.x - local.x, p.y - local.y);
+      if (d < closestDist) { closestDist = d; closest = NODES[i]; }
+    }
+    hoverNode = closest;
+    if (closest) {
+      var cp = project(closest.lat, closest.lon, width, height);
+      var sx = cp.x * view.scale + view.tx;
+      var sy = cp.y * view.scale + view.ty;
+      tooltip.style.left = sx + "px";
+      tooltip.style.top = sy + "px";
+      tooltipTitle.textContent = closest.name;
+      tooltip.classList.add("visible");
+    } else {
+      tooltip.classList.remove("visible");
+    }
+  });
+
+  function endDrag() {
+    dragging = false;
+    wrap.classList.remove("dragging");
+  }
+  wrap.addEventListener("pointerup", endDrag);
+  wrap.addEventListener("pointerleave", function () {
+    endDrag();
+    hoverNode = null;
+    tooltip.classList.remove("visible");
+  });
+
+  // -----------------------------------------------------------------
+  // Boot
+  // -----------------------------------------------------------------
+  renderCounters();
+  resize();
+  // seed a handful of in-flight attacks immediately so the map is
+  // visibly live on first paint, instead of waiting for the first
+  // spawn interval to elapse
+  for (var seed = 0; seed < 5; seed++) {
+    spawnAttack();
+    var seeded = attacks[attacks.length - 1];
+    if (seeded) seeded.start -= Math.random() * seeded.duration;
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
