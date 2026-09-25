@@ -37,6 +37,7 @@
     background: #04060a;
     overflow: hidden;
     user-select: none;
+    touch-action: none; /* Prevent default touch scroll gestures */
   }
 
   .ltm-scan {
@@ -63,6 +64,7 @@
     position: absolute;
     inset: 0;
     cursor: grab;
+    touch-action: none;
   }
   .ltm-wrap.dragging { cursor: grabbing; }
   .ltm-canvas-inner {
@@ -404,6 +406,67 @@
     font-size: 10.5px;
     color: rgba(255,255,255,0.45);
   }
+
+  /* ---------------------------------------------------------------- */
+  /* Mobile Responsiveness                                             */
+  /* ---------------------------------------------------------------- */
+  @media (max-width: 640px) {
+    .ltm-topleft {
+      top: 10px;
+      left: 10px;
+      padding: 4px 8px;
+    }
+    .ltm-label {
+      font-size: 8.5px;
+      letter-spacing: 0.08em;
+    }
+    .ltm-status-text {
+      font-size: 8px;
+    }
+    .ltm-stats {
+      top: 10px;
+      right: 10px;
+      grid-template-columns: repeat(2, auto);
+      column-gap: 10px;
+      row-gap: 3px;
+      padding: 4px 8px;
+    }
+    .ltm-stat-value {
+      font-size: 11px;
+    }
+    .ltm-stat-label {
+      font-size: 6.5px;
+      letter-spacing: 0.06em;
+    }
+    .ltm-zoom {
+      bottom: 10px;
+      left: 10px;
+    }
+    .ltm-zoom button {
+      height: 28px;
+      width: 28px;
+    }
+    .ltm-ticker {
+      bottom: 8px;
+      padding: 3px 8px;
+      font-size: 8.5px;
+      max-width: 90%;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .ltm-topleft {
+      max-width: 130px;
+    }
+    .ltm-label {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ltm-stats {
+      column-gap: 6px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -718,10 +781,32 @@ const LAND_HEX = [
     return d.toLocaleTimeString(undefined, { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
   }
 
+  function getMapBounds(width, height) {
+    var aspect = 2.0; // Natural equirectangular 2:1 map aspect ratio
+    var screenAspect = width / height;
+    var mapW, mapH, ox, oy;
+
+    if (screenAspect >= aspect) {
+      // Landscape screen
+      mapH = height;
+      mapW = height * aspect;
+      ox = (width - mapW) / 2;
+      oy = 0;
+    } else {
+      // Portrait / mobile screen: keep 2:1 aspect ratio to avoid vertical stretching!
+      mapW = Math.max(width, height * 0.62);
+      mapH = mapW / aspect;
+      ox = (width - mapW) / 2;
+      oy = (height - mapH) / 2;
+    }
+    return { w: mapW, h: mapH, ox: ox, oy: oy };
+  }
+
   function project(lat, lon, width, height) {
+    var b = getMapBounds(width, height);
     return {
-      x: ((lon + 180) / 360) * width,
-      y: ((90 - lat) / 180) * height
+      x: b.ox + ((lon + 180) / 360) * b.w,
+      y: b.oy + ((90 - lat) / 180) * b.h
     };
   }
 
@@ -797,20 +882,22 @@ const LAND_HEX = [
     var lctx = land.getContext("2d");
     lctx.scale(dpr, dpr);
 
+    var b = getMapBounds(width, height);
+
     lctx.strokeStyle = "rgba(120,170,255,0.06)";
     lctx.lineWidth = 1;
     for (var lon = -180; lon <= 180; lon += 30) {
       var px = project(0, lon, width, height).x;
       lctx.beginPath();
-      lctx.moveTo(px, 0);
-      lctx.lineTo(px, height);
+      lctx.moveTo(px, b.oy);
+      lctx.lineTo(px, b.oy + b.h);
       lctx.stroke();
     }
     for (var lat = -60; lat <= 90; lat += 30) {
       var py = project(lat, 0, width, height).y;
       lctx.beginPath();
-      lctx.moveTo(0, py);
-      lctx.lineTo(width, py);
+      lctx.moveTo(b.ox, py);
+      lctx.lineTo(b.ox + b.w, py);
       lctx.stroke();
     }
 
@@ -823,7 +910,7 @@ const LAND_HEX = [
         var seed = (row * 131 + col * 17) % 100;
         var alpha = 0.12 + (seed / 100) * 0.14;
         lctx.fillStyle = "rgba(0, 242, 255," + alpha.toFixed(3) + ")";
-        var r = width < 640 ? 0.9 : 1.2;
+        var r = width < 640 ? 0.75 : 1.15;
         lctx.beginPath();
         lctx.arc(p.x, p.y, r, 0, Math.PI * 2);
         lctx.fill();
@@ -971,9 +1058,10 @@ const LAND_HEX = [
 
     // Revolving Radar Sweep Animation
     if (!reducedMotion) {
+      var b = getMapBounds(width, height);
       var radarAngle = (now / 2400) % (Math.PI * 2);
-      var cx = width / 2, cy = height / 2;
-      var radius = Math.max(width, height) * 0.75;
+      var cx = b.ox + b.w / 2, cy = b.oy + b.h / 2;
+      var radius = Math.max(b.w, b.h) * 0.55;
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(cx, cy);
@@ -1180,28 +1268,60 @@ const LAND_HEX = [
     return { x: (rawX - view.tx) / view.scale, y: (rawY - view.ty) / view.scale };
   }
 
+  var activePointers = new Map();
+  var initialPinchDist = 0;
+  var initialScale = 1;
+
   wrap.addEventListener("pointerdown", function (e) {
-    if (view.scale <= 1.001) return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    wrap.setPointerCapture && wrap.setPointerCapture(e.pointerId);
+
     if (smoothTimeout) clearTimeout(smoothTimeout);
     inner.classList.remove("ltm-inner-smooth");
-    dragging = true;
-    wrap.classList.add("dragging");
-    dragStart = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
-    wrap.setPointerCapture && wrap.setPointerCapture(e.pointerId);
+
+    if (activePointers.size === 1) {
+      if (view.scale > 1.001) {
+        dragging = true;
+        wrap.classList.add("dragging");
+        dragStart = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
+      }
+    } else if (activePointers.size === 2) {
+      dragging = false;
+      wrap.classList.remove("dragging");
+      var pts = Array.from(activePointers.values());
+      initialPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      initialScale = view.scale;
+    }
   });
 
   wrap.addEventListener("pointermove", function (e) {
-    if (dragging) {
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointers.size === 2) {
+      var pts = Array.from(activePointers.values());
+      var dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (initialPinchDist > 0) {
+        var factor = dist / initialPinchDist;
+        var nextScale = Math.max(1, Math.min(2.8, initialScale * factor));
+        view = clampView({ scale: nextScale, tx: view.tx, ty: view.ty });
+        applyTransform();
+      }
+      return;
+    }
+
+    if (dragging && activePointers.size === 1) {
       var dx = e.clientX - dragStart.x;
       var dy = e.clientY - dragStart.y;
       view = clampView({ scale: view.scale, tx: dragStart.tx + dx, ty: dragStart.ty + dy });
       applyTransform();
       return;
     }
+
     var width = size.width, height = size.height;
     var local = toLocalPoint(e.clientX, e.clientY);
     var closest = null;
-    var closestDist = 14;
+    var closestDist = 16;
     for (var i = 0; i < NODES.length; i++) {
       var p = project(NODES[i].lat, NODES[i].lon, width, height);
       var d = Math.hypot(p.x - local.x, p.y - local.y);
@@ -1221,15 +1341,23 @@ const LAND_HEX = [
     }
   });
 
-  function endDrag() {
-    dragging = false;
-    wrap.classList.remove("dragging");
+  function removePointer(e) {
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) initialPinchDist = 0;
+    if (activePointers.size === 0) {
+      dragging = false;
+      wrap.classList.remove("dragging");
+    }
   }
-  wrap.addEventListener("pointerup", endDrag);
-  wrap.addEventListener("pointerleave", function () {
-    endDrag();
-    hoverNode = null;
-    tooltip.classList.remove("visible");
+
+  wrap.addEventListener("pointerup", removePointer);
+  wrap.addEventListener("pointercancel", removePointer);
+  wrap.addEventListener("pointerleave", function (e) {
+    removePointer(e);
+    if (activePointers.size === 0) {
+      hoverNode = null;
+      tooltip.classList.remove("visible");
+    }
   });
 
   // Boot
