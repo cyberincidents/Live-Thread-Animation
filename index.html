@@ -3,49 +3,51 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Live Threat Monitor</title>
+<title>AEGIS // Live Threat Monitor</title>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
 <style>
   :root {
     color-scheme: dark;
   }
-  * { box-sizing: border-box; }
-  body {
+  html, body {
     margin: 0;
-    background: #05070A;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Prevent all scrollbars */
+    background: #04060a;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   .ltm-mono {
-    font-family: "IBM Plex Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-family: 'JetBrains Mono', "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 
   /* ---------------------------------------------------------------- */
-  /* Section shell                                                     */
+  /* Fullscreen Section                                                */
   /* ---------------------------------------------------------------- */
   .ltm-section {
     position: relative;
-    width: 100%;
-    height: 420px;
-    background: #05070A;
+    width: 100vw;
+    height: 100vh;
+    background: #04060a;
     overflow: hidden;
     user-select: none;
-    
-  }
-  @media (min-width: 640px) {
-    .ltm-section { height: 560px; }
-  }
-  @media (min-width: 1024px) {
-    .ltm-section { height: 720px; }
   }
 
   .ltm-scan {
     pointer-events: none;
     position: absolute;
     inset: 0;
-    opacity: 0.05;
+    opacity: 0.04;
     background-image: repeating-linear-gradient(
       to bottom,
-      rgba(120,170,255,0.4) 0px,
-      rgba(120,170,255,0.4) 1px,
+      rgba(0, 242, 255, 0.4) 0px,
+      rgba(0, 242, 255, 0.4) 1px,
       transparent 1px,
       transparent 3px
     );
@@ -82,38 +84,38 @@
   /* ---------------------------------------------------------------- */
   .ltm-topleft {
     position: absolute;
-    top: 16px;
-    left: 16px;
+    top: 14px;
+    left: 14px;
     z-index: 10;
     display: flex;
     align-items: center;
-    gap: 12px;
-  }
-  @media (min-width: 640px) {
-    .ltm-topleft { top: 24px; left: 24px; }
+    gap: 8px;
+    background: rgba(8, 12, 20, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 5px 10px;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
   .ltm-label {
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    color: rgba(255,255,255,0.5);
-  }
-  @media (min-width: 640px) {
-    .ltm-label { font-size: 11px; }
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #00f2ff;
   }
   .ltm-status {
     display: flex;
     align-items: center;
-    gap: 6px;
-    border: 1px solid rgba(255,255,255,0.1);
-    background: rgba(255,255,255,0.03);
-    border-radius: 999px;
-    padding: 4px 8px;
+    gap: 5px;
+    padding-left: 6px;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
   }
   .ltm-dot-wrap {
     position: relative;
     display: flex;
-    height: 6px;
-    width: 6px;
+    height: 5px;
+    width: 5px;
   }
   .ltm-dot-ping {
     position: absolute;
@@ -125,8 +127,8 @@
   }
   .ltm-dot-core {
     position: relative;
-    height: 6px;
-    width: 6px;
+    height: 5px;
+    width: 5px;
     border-radius: 999px;
     background: #34d399;
   }
@@ -134,7 +136,7 @@
     75%, 100% { transform: scale(2.2); opacity: 0; }
   }
   .ltm-status-text {
-    font-size: 10px;
+    font-size: 9px;
     letter-spacing: 0.08em;
     color: rgba(110,231,183,0.9);
   }
@@ -149,20 +151,22 @@
   /* ---------------------------------------------------------------- */
   .ltm-zoom {
     position: absolute;
-    bottom: 16px;
-    left: 16px;
+    bottom: 14px;
+    left: 14px;
     z-index: 10;
     display: flex;
     flex-direction: column;
     gap: 4px;
   }
   .ltm-zoom button {
-    height: 28px;
-    width: 28px;
+    height: 24px;
+    width: 24px;
     border-radius: 6px;
     border: 1px solid rgba(255,255,255,0.1);
-    background: rgba(255,255,255,0.04);
-    color: rgba(255,255,255,0.6);
+    background: rgba(8, 12, 20, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: rgba(255,255,255,0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -171,7 +175,7 @@
     padding: 0;
   }
   .ltm-zoom button:hover {
-    background: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.15);
     color: #fff;
   }
   .ltm-zoom button.ltm-hidden { display: none; }
@@ -181,20 +185,30 @@
   /* ---------------------------------------------------------------- */
   .ltm-stats {
     position: absolute;
-    top: 16px;
-    right: 16px;
+    top: 14px;
+    right: 14px;
     z-index: 10;
     display: grid;
-    grid-template-columns: repeat(2, auto);
-    column-gap: 20px;
-    row-gap: 8px;
+    grid-template-columns: repeat(4, auto);
+    column-gap: 14px;
+    row-gap: 4px;
     text-align: right;
+    background: rgba(8, 12, 20, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 5px 12px;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
-  @media (min-width: 640px) {
-    .ltm-stats { top: 24px; right: 24px; column-gap: 28px; }
+  .ltm-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
   }
   .ltm-stat-value {
-    font-size: 16px;
+    font-size: 13px;
+    font-weight: 700;
     line-height: 1;
     font-variant-numeric: tabular-nums;
     display: inline-block;
@@ -212,17 +226,11 @@
     .ltm-stat-value.ltm-flash { animation: none; }
     .ltm-canvas-inner.ltm-inner-smooth { transition: none; }
   }
-  @media (min-width: 640px) {
-    .ltm-stat-value { font-size: 20px; }
-  }
   .ltm-stat-label {
-    margin-top: 4px;
-    font-size: 8.5px;
-    letter-spacing: 0.14em;
-    color: rgba(255,255,255,0.35);
-  }
-  @media (min-width: 640px) {
-    .ltm-stat-label { font-size: 9px; }
+    margin-top: 2px;
+    font-size: 7.5px;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.4);
   }
 
   /* ---------------------------------------------------------------- */
@@ -231,17 +239,17 @@
   .ltm-feed {
     display: none;
     position: absolute;
-    bottom: 24px;
-    right: 24px;
+    bottom: 14px;
+    right: 14px;
     z-index: 10;
-    width: 288px;
+    width: 230px;
     flex-direction: column;
-    border-radius: 10px;
+    border-radius: 8px;
     border: 1px solid rgba(255,255,255,0.1);
-    background: rgba(8,11,16,0.9);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+    background: rgba(8, 12, 20, 0.85);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
   }
   @media (min-width: 768px) {
     .ltm-feed { display: flex; }
@@ -250,39 +258,40 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 14px 8px;
+    padding: 6px 10px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
   }
   .ltm-feed-title {
-    font-size: 10px;
-    letter-spacing: 0.18em;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
     color: rgba(255,255,255,0.4);
   }
   .ltm-feed-time {
-    font-size: 10px;
-    color: rgba(255,255,255,0.25);
+    font-size: 8.5px;
+    color: #00f2ff;
   }
   .ltm-feed-body {
-    max-height: 208px;
+    max-height: 150px;
     overflow: hidden;
-    padding: 6px;
+    padding: 4px;
   }
   .ltm-feed-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    border-radius: 6px;
-    padding: 6px 8px;
+    gap: 6px;
+    border-radius: 4px;
+    padding: 4px 6px;
     animation: ltm-row-in .22s ease-out;
   }
-  .ltm-feed-row:hover { background: rgba(255,255,255,0.03); }
+  .ltm-feed-row:hover { background: rgba(255,255,255,0.04); }
   @keyframes ltm-row-in {
     from { opacity: 0; transform: translateY(-6px); }
     to { opacity: 1; transform: translateY(0); }
   }
   .ltm-feed-dot {
-    height: 6px;
-    width: 6px;
+    height: 5px;
+    width: 5px;
     border-radius: 999px;
     flex-shrink: 0;
   }
@@ -291,32 +300,33 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
   }
   .ltm-feed-type {
-    font-size: 10.5px;
+    font-size: 9.5px;
+    font-weight: 600;
     letter-spacing: 0.02em;
-    color: rgba(255,255,255,0.8);
+    color: rgba(255,255,255,0.85);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .ltm-feed-when {
-    font-size: 9.5px;
+    font-size: 8.5px;
     color: rgba(255,255,255,0.3);
     flex-shrink: 0;
   }
   .ltm-feed-route {
-    font-size: 10.5px;
+    font-size: 8.5px;
     color: rgba(255,255,255,0.4);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .ltm-feed-empty {
-    padding: 24px 8px;
+    padding: 16px 6px;
     text-align: center;
-    font-size: 11px;
+    font-size: 9.5px;
     color: rgba(255,255,255,0.25);
   }
 
@@ -326,37 +336,41 @@
   .ltm-ticker {
     display: flex;
     position: absolute;
-    bottom: 12px;
+    bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
-    width: 92%;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.1);
-    background: rgba(8,11,16,0.9);
+    width: auto;
+    max-width: 85%;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(8, 12, 20, 0.85);
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
-    padding: 8px 12px;
+    padding: 4px 10px;
     align-items: center;
-    gap: 8px;
-    font-size: 11px;
+    gap: 6px;
+    font-size: 9.5px;
+    white-space: nowrap;
     overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
   }
   @media (min-width: 768px) {
     .ltm-ticker { display: none; }
   }
   .ltm-ticker-dot {
-    height: 6px;
-    width: 6px;
+    height: 5px;
+    width: 5px;
     border-radius: 999px;
     flex-shrink: 0;
   }
-  .ltm-ticker-type { color: rgba(255,255,255,0.8); flex-shrink: 0; }
+  .ltm-ticker-type { color: rgba(255,255,255,0.85); flex-shrink: 0; font-weight: 600; font-size: 9.5px; }
   .ltm-ticker-route {
-    color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.45);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-size: 9px;
   }
 
   /* ---------------------------------------------------------------- */
@@ -366,14 +380,14 @@
     pointer-events: none;
     position: absolute;
     z-index: 20;
-    transform: translate(-50%, calc(-100% - 4px));
-    border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.1);
-    background: rgba(10,15,22,0.95);
+    transform: translate(-50%, calc(-100% - 6px));
+    border-radius: 8px;
+    border: 1px solid rgba(0, 242, 255, 0.3);
+    background: rgba(8, 12, 20, 0.95);
     padding: 8px 12px;
     font-size: 12px;
     color: rgba(255,255,255,0.9);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     white-space: nowrap;
@@ -384,11 +398,11 @@
     opacity: 1;
     transform: translate(-50%, calc(-100% - 10px));
   }
-  .ltm-tooltip-title { font-weight: 500; letter-spacing: 0.02em; }
+  .ltm-tooltip-title { font-weight: 600; font-size: 12.5px; color: #fff; }
   .ltm-tooltip-line {
     margin-top: 2px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.5);
+    font-size: 10.5px;
+    color: rgba(255,255,255,0.45);
   }
 </style>
 </head>
@@ -405,47 +419,47 @@
 
   <div class="ltm-tooltip ltm-mono" id="ltmTooltip">
     <div class="ltm-tooltip-title" id="ltmTooltipTitle"></div>
-    <div class="ltm-tooltip-line">Monitored node</div>
-    <div class="ltm-tooltip-line">Click and drag to pan</div>
+    <div class="ltm-tooltip-line">Monitored Defense Node</div>
+    <div class="ltm-tooltip-line">Click and drag to pan map</div>
   </div>
 
   <div class="ltm-topleft">
-    <span class="ltm-label ltm-mono"> </span>
+    <span class="ltm-label ltm-mono">AEGIS // LIVE THREAT MONITOR</span>
     <span class="ltm-status">
       <span class="ltm-dot-wrap">
         <span class="ltm-dot-ping"></span>
         <span class="ltm-dot-core"></span>
       </span>
-  
+      <span class="ltm-status-text ltm-mono">GRID ACTIVE</span>
     </span>
   </div>
 
   <div class="ltm-zoom">
     <button id="ltmZoomIn" aria-label="Zoom in">
-      <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <svg width="12" height="12" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
     </button>
     <button id="ltmZoomOut" aria-label="Zoom out">
-      <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <svg width="12" height="12" viewBox="0 0 11 11" fill="none"><path d="M1 5.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
     </button>
     <button id="ltmZoomReset" aria-label="Reset view" class="ltm-hidden">
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 5a4 4 0 1 1 1.2 2.85M1 5V2M1 5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg width="12" height="12" viewBox="0 0 10 10" fill="none"><path d="M1 5a4 4 0 1 1 1.2 2.85M1 5V2M1 5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </div>
 
   <div class="ltm-stats ltm-mono">
-    <div>
-      <div class="ltm-stat-value" id="statDetected" style="color:#4C8DF6">0</div>
+    <div class="ltm-stat-item">
+      <div class="ltm-stat-value" id="statDetected" style="color:#00f2ff">0</div>
       <div class="ltm-stat-label">THREATS DETECTED</div>
     </div>
-    <div>
+    <div class="ltm-stat-item">
       <div class="ltm-stat-value" id="statBlocked" style="color:#2DD4E8">0</div>
       <div class="ltm-stat-label">ATTACKS BLOCKED</div>
     </div>
-    <div>
-      <div class="ltm-stat-value" id="statActive" style="color:#F6A64B">0</div>
+    <div class="ltm-stat-item">
+      <div class="ltm-stat-value" id="statActive" style="color:#ff9f1c">0</div>
       <div class="ltm-stat-label">ACTIVE THREATS</div>
     </div>
-    <div>
+    <div class="ltm-stat-item">
       <div class="ltm-stat-value" id="statSources" style="color:#8B8FA3">0</div>
       <div class="ltm-stat-label">SOURCES MONITORED</div>
     </div>
@@ -472,7 +486,7 @@ const LAND_HEX = [
   "0000000000000000000000000000000000000000000000000000000",
   "0000000000000000000000000000000000000000000000000000000",
   "0000000000000000000000000000000000000000000000000000000",
-  "000000000000001fff007fff8000000000000000000000000000000",
+  "00000000000001fff007fff80000000000000000000000000000000",
   "0000000000000dfffbfffffffc00000000000000018000000000000",
   "00000000000007bf03ffffffc00007c00000000001e000000000000",
   "00000000006018bc3fffffffc000019800000000000000000000000",
@@ -568,7 +582,7 @@ const LAND_HEX = [
   "00000000000000003f000000000000003bffff87fffffffffffe000",
   "0000000000000000770000000021ffffffffff3ffffffffffffff80",
   "00000000000181000f80000003fffffffffffffffffffffffffffc0",
-  "0000001d8780ffffff0000000fffffffffffffffffffffffffffe00",
+  "0000001d8780ffffff0000000fffffffffffffffffffffffffffe0",
   "000007fffffffffff0000000ffffffffffffffffffffffffffffc00",
   "0007ffffffffffff8000003fffffffffffffffffffffffffffffc00",
   "00181ffffffffffe0001e0cfffffffffffffffffffffffffffff800",
@@ -577,8 +591,9 @@ const LAND_HEX = [
   "ae003fffffffffffffffffffffffffffffffffffffffffffffffff4",
   "0000000000000000000000000000000000000000000000000000000",
   "0000000000000000000000000000000000000000000000000000000",
-  "0000000000000000000000000000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000"
 ];
+
 (function () {
   "use strict";
 
@@ -604,9 +619,7 @@ const LAND_HEX = [
     return LAND_GRID[row][col] === 1;
   }
 
-  // -----------------------------------------------------------------
   // Domain data
-  // -----------------------------------------------------------------
   var NODES = [
     { id: "nyc", name: "New York", lat: 40.7, lon: -74.0 },
     { id: "sfo", name: "San Francisco", lat: 37.7, lon: -122.4 },
@@ -695,9 +708,7 @@ const LAND_HEX = [
 
   var START_COUNTERS = { detected: 128442, blocked: 124881, active: 34, sources: 18642 };
 
-  // -----------------------------------------------------------------
   // DOM refs
-  // -----------------------------------------------------------------
   var section = document.getElementById("ltmSection");
   var wrap = document.getElementById("ltmWrap");
   var inner = document.getElementById("ltmInner");
@@ -739,9 +750,7 @@ const LAND_HEX = [
     reducedMotion = e.matches;
   });
 
-  // -----------------------------------------------------------------
   // Sizing
-  // -----------------------------------------------------------------
   function resize() {
     var rect = wrap.getBoundingClientRect();
     size.width = Math.round(rect.width);
@@ -787,7 +796,7 @@ const LAND_HEX = [
         var seed = (row * 131 + col * 17) % 100;
         var alpha = 0.1 + (seed / 100) * 0.12;
         lctx.fillStyle = "rgba(94,148,255," + alpha.toFixed(3) + ")";
-        var r = width < 640 ? 0.8 : 1.1;
+        var r = width < 640 ? 0.8 : 1.15;
         lctx.beginPath();
         lctx.arc(p.x, p.y, r, 0, Math.PI * 2);
         lctx.fill();
@@ -796,9 +805,7 @@ const LAND_HEX = [
     landCanvas = land;
   }
 
-  // -----------------------------------------------------------------
   // Simulation: spawn attacks + feed/counters
-  // -----------------------------------------------------------------
   function spawnAttack() {
     var pair = pickTwoDistinct(NODES);
     var from = pair[0], to = pair[1];
@@ -888,7 +895,7 @@ const LAND_HEX = [
               '<span class="ltm-feed-type ltm-mono">' + ev.type + '</span>' +
               '<span class="ltm-feed-when ltm-mono">' + ev.time + '</span>' +
             '</div>' +
-            '<div class="ltm-feed-route">' + ev.source + ' \u2192 ' + ev.target + '</div>' +
+            '<div class="ltm-feed-route ltm-mono">' + ev.source + ' \u2192 ' + ev.target + '</div>' +
           '</div>' +
         '</div>'
       );
@@ -904,9 +911,7 @@ const LAND_HEX = [
       '<span class="ltm-ticker-route">' + ev.source + ' \u2192 ' + ev.target + '</span>';
   }
 
-  // -----------------------------------------------------------------
   // Main render loop
-  // -----------------------------------------------------------------
   function tick(now) {
     requestAnimationFrame(tick);
     if (!visible) return;
@@ -930,10 +935,6 @@ const LAND_HEX = [
 
     if (landCanvas) ctx.drawImage(landCanvas, 0, 0, width, height);
 
-    // The attack arcs are the actual content of a live threat map, not a
-    // decorative flourish — so they keep animating even under
-    // prefers-reduced-motion. Only the ambient/non-essential effects below
-    // (radar sweep, node breathing) back off for that preference.
     if (now - lastSpawn > nextSpawnGap) {
       lastSpawn = now;
       nextSpawnGap = 380 + Math.random() * 620;
@@ -997,9 +998,6 @@ const LAND_HEX = [
         };
       }
 
-      // ease the travel progress itself (slow out of the source, slow into
-      // the target) rather than the raw linear timer, so the arc feels like
-      // it has real momentum instead of ticking along at constant speed.
       var et = easeInOutCubic(t);
       var trailStartLinear = Math.max(0, t - 0.35);
       var trailStart = easeInOutCubic(trailStartLinear);
@@ -1012,8 +1010,6 @@ const LAND_HEX = [
       for (var s = 0; s <= steps; s++) {
         var tt2 = trailStart + ((et - trailStart) * s) / steps;
         var pt = bezier(tt2);
-        // fade the tail in from 0 -> ~0.8 alpha so the trail feels like it
-        // is dissolving behind the particle rather than a hard-edged line
         ctx.globalAlpha = 0.8 * (s / steps);
         if (s === 0) {
           ctx.moveTo(pt.x, pt.y);
@@ -1027,8 +1023,6 @@ const LAND_HEX = [
       ctx.restore();
 
       var head = bezier(et);
-      // gentle glow pulse on the particle head itself, tied to a fast sine
-      // so it reads as "traveling energy" rather than a static dot
       var headPulse = 1 + Math.sin(now / 90 + a.id) * 0.18;
       ctx.save();
       ctx.shadowBlur = 14 * headPulse;
@@ -1084,17 +1078,7 @@ const LAND_HEX = [
     }
   }
 
-  // -----------------------------------------------------------------
-  // Visibility pause
-  // -----------------------------------------------------------------
-  var io = new IntersectionObserver(function (entries) {
-    visible = entries[0].isIntersecting;
-  }, { threshold: 0.05 });
-  io.observe(section);
-
-  // -----------------------------------------------------------------
   // Pointer interaction: hover + drag pan + zoom
-  // -----------------------------------------------------------------
   function applyTransform() {
     inner.style.transform = "translate(" + view.tx + "px, " + view.ty + "px) scale(" + view.scale + ")";
     zoomResetBtn.classList.toggle("ltm-hidden", view.scale <= 1.001);
@@ -1199,14 +1183,9 @@ const LAND_HEX = [
     tooltip.classList.remove("visible");
   });
 
-  // -----------------------------------------------------------------
   // Boot
-  // -----------------------------------------------------------------
   renderCounters();
   resize();
-  // seed a handful of in-flight attacks immediately so the map is
-  // visibly live on first paint, instead of waiting for the first
-  // spawn interval to elapse
   for (var seed = 0; seed < 5; seed++) {
     spawnAttack();
     var seeded = attacks[attacks.length - 1];
