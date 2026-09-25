@@ -424,15 +424,14 @@
   </div>
 
   <div class="ltm-topleft">
-    <span class="ltm-label ltm-mono">AEGIS // LIVE THREAT MONITOR</span>
-    <span class="ltm-status">
-      <span class="ltm-dot-wrap">
-        <span class="ltm-dot-ping"></span>
-        <span class="ltm-dot-core"></span>
-      </span>
-      <span class="ltm-status-text ltm-mono">GRID ACTIVE</span>
-    </span>
-  </div>
+    <span class="ltm-label">LIVE THREAT MONITOR</span>
+    <div class="ltm-status">
+      <div class="ltm-dot-wrap">
+        <div class="ltm-dot-ping"></div>
+        <div class="ltm-dot-core"></div>
+      </div>
+      <span class="ltm-status-text">ONLINE</span>
+    </div>
 
   <div class="ltm-zoom">
     <button id="ltmZoomIn" aria-label="Zoom in">
@@ -619,30 +618,68 @@ const LAND_HEX = [
     return LAND_GRID[row][col] === 1;
   }
 
-  // Domain data
+  // Domain data - 54 Global Monitored Nodes across all continents
   var NODES = [
+    // North America
     { id: "nyc", name: "New York", lat: 40.7, lon: -74.0 },
     { id: "sfo", name: "San Francisco", lat: 37.7, lon: -122.4 },
+    { id: "chi", name: "Chicago", lat: 41.8, lon: -87.6 },
+    { id: "dal", name: "Dallas", lat: 32.7, lon: -96.7 },
+    { id: "mia", name: "Miami", lat: 25.7, lon: -80.1 },
+    { id: "sea", name: "Seattle", lat: 47.6, lon: -122.3 },
     { id: "tor", name: "Toronto", lat: 43.7, lon: -79.4 },
+    { id: "van", name: "Vancouver", lat: 49.2, lon: -123.1 },
     { id: "mex", name: "Mexico City", lat: 19.4, lon: -99.1 },
+    // South America
     { id: "sao", name: "São Paulo", lat: -23.5, lon: -46.6 },
+    { id: "rio", name: "Rio de Janeiro", lat: -22.9, lon: -43.1 },
     { id: "bue", name: "Buenos Aires", lat: -34.6, lon: -58.4 },
+    { id: "sti", name: "Santiago", lat: -33.4, lon: -70.6 },
+    { id: "lim", name: "Lima", lat: -12.0, lon: -77.0 },
+    { id: "bog", name: "Bogotá", lat: 4.7, lon: -74.0 },
+    // Europe
     { id: "lon", name: "London", lat: 51.5, lon: -0.1 },
     { id: "par", name: "Paris", lat: 48.9, lon: 2.3 },
     { id: "fra", name: "Frankfurt", lat: 50.1, lon: 8.7 },
+    { id: "ams", name: "Amsterdam", lat: 52.3, lon: 4.8 },
+    { id: "zrh", name: "Zurich", lat: 47.3, lon: 8.5 },
+    { id: "sto", name: "Stockholm", lat: 59.3, lon: 18.0 },
+    { id: "mad", name: "Madrid", lat: 40.4, lon: -3.7 },
+    { id: "mil", name: "Milan", lat: 45.4, lon: 9.1 },
+    { id: "vie", name: "Vienna", lat: 48.2, lon: 16.3 },
+    { id: "waw", name: "Warsaw", lat: 52.2, lon: 21.0 },
+    { id: "kyi", name: "Kyiv", lat: 50.4, lon: 30.5 },
     { id: "mos", name: "Moscow", lat: 55.8, lon: 37.6 },
     { id: "ist", name: "Istanbul", lat: 41.0, lon: 28.9 },
+    // Africa & Middle East
+    { id: "cai", name: "Cairo", lat: 30.0, lon: 31.2 },
     { id: "lag", name: "Lagos", lat: 6.5, lon: 3.4 },
+    { id: "nai", name: "Nairobi", lat: -1.28, lon: 36.8 },
     { id: "joh", name: "Johannesburg", lat: -26.2, lon: 28.0 },
+    { id: "cas", name: "Casablanca", lat: 33.5, lon: -7.5 },
     { id: "dub", name: "Dubai", lat: 25.2, lon: 55.3 },
+    { id: "ruh", name: "Riyadh", lat: 24.7, lon: 46.6 },
+    { id: "tlv", name: "Tel Aviv", lat: 32.0, lon: 34.7 },
+    // Asia
     { id: "mum", name: "Mumbai", lat: 19.1, lon: 72.9 },
+    { id: "del", name: "Delhi", lat: 28.6, lon: 77.2 },
+    { id: "blr", name: "Bengaluru", lat: 12.9, lon: 77.5 },
     { id: "sin", name: "Singapore", lat: 1.35, lon: 103.8 },
     { id: "jak", name: "Jakarta", lat: -6.2, lon: 106.8 },
-    { id: "bei", name: "Beijing", lat: 39.9, lon: 116.4 },
+    { id: "bgk", name: "Bangkok", lat: 13.7, lon: 100.5 },
+    { id: "mnl", name: "Manila", lat: 14.5, lon: 120.9 },
+    { id: "hkg", name: "Hong Kong", lat: 22.3, lon: 114.1 },
+    { id: "tpe", name: "Taipei", lat: 25.0, lon: 121.5 },
     { id: "sha", name: "Shanghai", lat: 31.2, lon: 121.5 },
-    { id: "tok", name: "Tokyo", lat: 35.7, lon: 139.7 },
+    { id: "bei", name: "Beijing", lat: 39.9, lon: 116.4 },
     { id: "seo", name: "Seoul", lat: 37.6, lon: 127.0 },
-    { id: "syd", name: "Sydney", lat: -33.9, lon: 151.2 }
+    { id: "tok", name: "Tokyo", lat: 35.7, lon: 139.7 },
+    { id: "osa", name: "Osaka", lat: 34.6, lon: 135.5 },
+    // Oceania
+    { id: "syd", name: "Sydney", lat: -33.9, lon: 151.2 },
+    { id: "mel", name: "Melbourne", lat: -37.8, lon: 144.9 },
+    { id: "akl", name: "Auckland", lat: -36.8, lon: 174.7 },
+    { id: "per", name: "Perth", lat: -31.9, lon: 115.8 }
   ];
 
   var THREAT_TYPES = ["RANSOMWARE", "BOTNET", "PHISHING", "MALWARE", "DDoS", "BRUTE FORCE"];
@@ -706,7 +743,7 @@ const LAND_HEX = [
     return x >= 1 ? 1 : 1 - Math.pow(2, -10 * x);
   }
 
-  var START_COUNTERS = { detected: 128442, blocked: 124881, active: 34, sources: 18642 };
+  var START_COUNTERS = { detected: 148920, blocked: 144810, active: 48, sources: NODES.length };
 
   // DOM refs
   var section = document.getElementById("ltmSection");
@@ -740,9 +777,7 @@ const LAND_HEX = [
   var pulses = [];
   var idCounter = 1;
   var lastSpawn = 0;
-  var nextSpawnGap = 700;
-  var sweepStart = null;
-  var nextSweepAt = 6000;
+  var nextSpawnGap = 200;
   var hoverNode = null;
   var visible = true;
   var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -770,7 +805,7 @@ const LAND_HEX = [
     var lctx = land.getContext("2d");
     lctx.scale(dpr, dpr);
 
-    lctx.strokeStyle = "rgba(120,170,255,0.05)";
+    lctx.strokeStyle = "rgba(120,170,255,0.06)";
     lctx.lineWidth = 1;
     for (var lon = -180; lon <= 180; lon += 30) {
       var px = project(0, lon, width, height).x;
@@ -794,9 +829,9 @@ const LAND_HEX = [
         var clon = -180 + (col + 0.5) * (360 / LAND_COLS);
         var p = project(clat, clon, width, height);
         var seed = (row * 131 + col * 17) % 100;
-        var alpha = 0.1 + (seed / 100) * 0.12;
-        lctx.fillStyle = "rgba(94,148,255," + alpha.toFixed(3) + ")";
-        var r = width < 640 ? 0.8 : 1.15;
+        var alpha = 0.12 + (seed / 100) * 0.14;
+        lctx.fillStyle = "rgba(0, 242, 255," + alpha.toFixed(3) + ")";
+        var r = width < 640 ? 0.9 : 1.2;
         lctx.beginPath();
         lctx.arc(p.x, p.y, r, 0, Math.PI * 2);
         lctx.fill();
@@ -817,12 +852,12 @@ const LAND_HEX = [
       from: from,
       to: to,
       color: color,
-      arcBend: (Math.random() - 0.5) * 2,
+      arcBend: (Math.random() - 0.5) * 2.2,
       start: performance.now(),
-      duration: 1900 + Math.random() * 1400
+      duration: 1600 + Math.random() * 1200
     };
     attacks.push(attack);
-    if (attacks.length > 40) attacks.splice(0, attacks.length - 40);
+    if (attacks.length > 70) attacks.splice(0, attacks.length - 70);
 
     var event = {
       id: attack.id,
@@ -838,9 +873,9 @@ const LAND_HEX = [
     renderTicker(event);
 
     counters.detected += 1;
-    if (Math.random() < 0.82) counters.blocked += 1;
+    if (Math.random() < 0.84) counters.blocked += 1;
     counters.active = attacks.length;
-    if (Math.random() < 0.06) counters.sources += 1;
+    counters.sources = NODES.length;
     renderCounters();
   }
 
@@ -871,10 +906,10 @@ const LAND_HEX = [
   }
 
   function renderCounters() {
-    var dur = reducedMotion ? 0 : 550;
+    var dur = reducedMotion ? 0 : 450;
     animateStat(statDetected, prevCounters.detected, counters.detected, dur);
     animateStat(statBlocked, prevCounters.blocked, counters.blocked, dur);
-    animateStat(statActive, prevCounters.active, counters.active, 380);
+    animateStat(statActive, prevCounters.active, counters.active, 250);
     animateStat(statSources, prevCounters.sources, counters.sources, dur);
     prevCounters = Object.assign({}, counters);
   }
@@ -928,55 +963,44 @@ const LAND_HEX = [
     ctx.clearRect(0, 0, width, height);
 
     var grad = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * 0.7);
-    grad.addColorStop(0, "rgba(20,35,60,0.35)");
+    grad.addColorStop(0, "rgba(10,24,44,0.4)");
     grad.addColorStop(1, "rgba(3,5,8,0)");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, width, height);
 
     if (landCanvas) ctx.drawImage(landCanvas, 0, 0, width, height);
 
+    // Continuous Spawn
     if (now - lastSpawn > nextSpawnGap) {
       lastSpawn = now;
-      nextSpawnGap = 380 + Math.random() * 620;
+      nextSpawnGap = 120 + Math.random() * 260;
       spawnAttack();
     }
 
+    // Revolving Radar Sweep Animation
     if (!reducedMotion) {
-      if (sweepStart === null && now > nextSweepAt) sweepStart = now;
-      if (sweepStart !== null) {
-        var sweepT = (now - sweepStart) / 2600;
-        if (sweepT >= 1) {
-          sweepStart = null;
-          nextSweepAt = now + 13000 + Math.random() * 6000;
-        } else {
-          var cx = width / 2, cy = height / 2;
-          var radius = Math.max(width, height) * 0.75;
-          var angle = sweepT * Math.PI * 2 - Math.PI / 2;
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(cx, cy);
-          ctx.arc(cx, cy, radius, angle - 0.5, angle);
-          ctx.closePath();
-          if (ctx.createConicGradient) {
-            var sg = ctx.createConicGradient(angle - 0.5, cx, cy);
-            sg.addColorStop(0, "rgba(45,212,232,0)");
-            sg.addColorStop(1, "rgba(45,212,232,0.06)");
-            ctx.fillStyle = sg;
-          } else {
-            ctx.fillStyle = "rgba(45,212,232,0.04)";
-          }
-          ctx.fill();
-          ctx.restore();
-        }
-      }
+      var radarAngle = (now / 2400) % (Math.PI * 2);
+      var cx = width / 2, cy = height / 2;
+      var radius = Math.max(width, height) * 0.75;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, radarAngle - 0.45, radarAngle);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(0, 242, 255, 0.045)";
+      ctx.fill();
+      ctx.restore();
     }
 
+    // Attack Arcs & Particle Trails Animation
     for (var i = attacks.length - 1; i >= 0; i--) {
       var a = attacks[i];
       var t = (now - a.start) / a.duration;
       if (t >= 1) {
         var p2 = project(a.to.lat, a.to.lon, width, height);
-        pulses.push({ x: p2.x, y: p2.y, start: now, duration: 1100, color: a.color });
+        // Double Shockwave Rings on Impact
+        pulses.push({ x: p2.x, y: p2.y, start: now, duration: 900, color: a.color, maxRadius: 22 });
+        pulses.push({ x: p2.x, y: p2.y, start: now + 120, duration: 1100, color: a.color, maxRadius: 34 });
         attacks.splice(i, 1);
         continue;
       }
@@ -999,18 +1023,18 @@ const LAND_HEX = [
       }
 
       var et = easeInOutCubic(t);
-      var trailStartLinear = Math.max(0, t - 0.35);
+      var trailStartLinear = Math.max(0, t - 0.38);
       var trailStart = easeInOutCubic(trailStartLinear);
 
       ctx.save();
       ctx.strokeStyle = a.color;
-      ctx.lineWidth = 1.6;
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
-      var steps = 24;
+      var steps = 28;
       for (var s = 0; s <= steps; s++) {
         var tt2 = trailStart + ((et - trailStart) * s) / steps;
         var pt = bezier(tt2);
-        ctx.globalAlpha = 0.8 * (s / steps);
+        ctx.globalAlpha = 0.85 * (s / steps);
         if (s === 0) {
           ctx.moveTo(pt.x, pt.y);
         } else {
@@ -1022,56 +1046,89 @@ const LAND_HEX = [
       }
       ctx.restore();
 
+      // Main Particle Head & Trailing Spark Dots
       var head = bezier(et);
-      var headPulse = 1 + Math.sin(now / 90 + a.id) * 0.18;
+      var headPulse = 1 + Math.sin(now / 90 + a.id) * 0.22;
       ctx.save();
-      ctx.shadowBlur = 14 * headPulse;
+      ctx.shadowBlur = 16 * headPulse;
       ctx.shadowColor = a.color;
       ctx.fillStyle = a.color;
       ctx.globalAlpha = 1;
       ctx.beginPath();
-      ctx.arc(head.x, head.y, 2.6 * headPulse, 0, Math.PI * 2);
+      ctx.arc(head.x, head.y, 2.8 * headPulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Trailing Spark Dots
+      var spark1 = bezier(Math.max(0, et - 0.04));
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.arc(spark1.x, spark1.y, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      var spark2 = bezier(Math.max(0, et - 0.08));
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath();
+      ctx.arc(spark2.x, spark2.y, 1.2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
 
+    // Impact Pulses Shockwaves
     for (var j = pulses.length - 1; j >= 0; j--) {
       var p = pulses[j];
       var tp = (now - p.start) / p.duration;
-      if (tp >= 1) {
-        pulses.splice(j, 1);
+      if (tp >= 1 || tp < 0) {
+        if (tp >= 1) pulses.splice(j, 1);
         continue;
       }
-      var rr = 4 + easeOutExpo(tp) * 22;
+      var rr = 3 + easeOutExpo(tp) * (p.maxRadius || 26);
       ctx.save();
-      ctx.globalAlpha = Math.pow(1 - tp, 1.6) * 0.6;
+      ctx.globalAlpha = Math.pow(1 - tp, 1.5) * 0.7;
       ctx.strokeStyle = p.color;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.6;
       ctx.beginPath();
       ctx.arc(p.x, p.y, rr, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
 
+    // Monitored Nodes & Ambient Node Pulse Rings
     var breathe = reducedMotion ? 0 : Math.sin(now / 900) * 0.5 + 0.5;
     for (var n = 0; n < NODES.length; n++) {
       var node = NODES[n];
       var np = project(node.lat, node.lon, width, height);
       var isHover = hoverNode === node;
-      ctx.save();
-      ctx.beginPath();
-      ctx.fillStyle = isHover ? "rgba(255,255,255,0.95)" : "rgba(120,190,255," + (0.55 + breathe * 0.25).toFixed(3) + ")";
-      ctx.shadowBlur = isHover ? 14 : 6;
-      ctx.shadowColor = isHover ? "#ffffff" : "#5ea4ff";
-      ctx.arc(np.x, np.y, isHover ? 3.2 : 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      if (isHover) {
+
+      // Ambient Node Pulse Ring Animation
+      if (!reducedMotion) {
+        var nodePhase = (now / 1600 + n * 0.22) % 1;
+        var nodeRadius = 3 + nodePhase * 12;
         ctx.save();
-        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.globalAlpha = (1 - nodePhase) * 0.35;
+        ctx.strokeStyle = isHover ? "#ffffff" : "rgba(0, 242, 255, 0.8)";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(np.x, np.y, 8, 0, Math.PI * 2);
+        ctx.arc(np.x, np.y, nodeRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Core Node Dot
+      ctx.save();
+      ctx.beginPath();
+      ctx.fillStyle = isHover ? "#ffffff" : "rgba(0, 242, 255, " + (0.7 + breathe * 0.3).toFixed(3) + ")";
+      ctx.shadowBlur = isHover ? 16 : 8;
+      ctx.shadowColor = isHover ? "#ffffff" : "#00f2ff";
+      ctx.arc(np.x, np.y, isHover ? 3.8 : 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      if (isHover) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(np.x, np.y, 9, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }
@@ -1186,7 +1243,7 @@ const LAND_HEX = [
   // Boot
   renderCounters();
   resize();
-  for (var seed = 0; seed < 5; seed++) {
+  for (var seed = 0; seed < 10; seed++) {
     spawnAttack();
     var seeded = attacks[attacks.length - 1];
     if (seeded) seeded.start -= Math.random() * seeded.duration;
